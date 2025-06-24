@@ -1,4 +1,4 @@
-from os import listdir
+from os import listdir, path, remove
 from json import load, dump
 from requests import post
 from random import randint
@@ -8,11 +8,16 @@ from tkinter import Tk, Label, StringVar, OptionMenu, Entry, Button, Frame, Topl
 from sys import exit
 from re import search
 
+
+
 # initialisation variables
+base_dir = path.dirname(path.abspath(__file__))
 liste_labels = []# liste utiliser en global pour stocker les labels tkinter et les supprimer
-with open('C:/Users/griff/Documents/python/learn_japonais/API.txt', 'r') as fichier:# Chargement de la clé API depuis un fichier
+with open(f'{base_dir}\\API.txt', 'r', encoding="utf-8") as fichier:# Chargement de la clé API depuis un fichier
     api_key = fichier.read().strip()
-path = listdir('C:/Users/griff/Documents/python/learn_japonais/sujet_de_voc')# Chemin vers les fichiers de vocabulaire
+
+
+path = listdir(f'{base_dir}\\sujet_de_voc')# Chemin vers les fichiers de vocabulaire
 
 #initialisation de l'API Mistral
 url = "https://api.mistral.ai/v1/chat/completions"
@@ -58,20 +63,23 @@ def send(instruction, demande):# Envoie une requête à l'API Mistral pour gén�
     }
     reponse = post(url, headers=headers, json=message)
     vocabulaire = reponse.json()
+    if vocabulaire['object'] == 'error':
+        print(f"Erreur de l'API : {vocabulaire['error']['message']}")
+        return None
     return vocabulaire['choices'][0] ['message'] ['content']
 
 
 def apprendre(fichier):
     
     #Réinitialise la fenêtre et les labels pour ne pas aditioner avec les précédents
-    global liste_labels, fenetre
+    global liste_labels, fenetre, base_dir
     fenetre.geometry("400x300")
     for label in liste_labels:
         label.destroy()
     liste_labels = []
 
     # Ouvre le fichier de vocabulaire et charge les listes de mots
-    with open(f'C:/Users/griff/Documents/python/learn_japonais/sujet_de_voc/{fichier}', 'r') as fichier:
+    with open(f'{base_dir}/sujet_de_voc/{fichier}', 'r', encoding="utf-8") as fichier:
         listes = load(fichier)
     
     # Ajuste la taille de la fenêtre en fonction du nombre de mots
@@ -85,14 +93,15 @@ def apprendre(fichier):
 
 def creer_nouveau_sujet(sujet):
 
-    global path, fenetre, choix_apprendre, choix_interrogation
+    global path, fenetre, choix_apprendre, choix_interrogation, base_dir
 
     # génère un nouveau sujet de vocabulaire
     index = 0
-    while not reponse or search(r"[a-zA-Z= ,éèêïëôàùçî']", reponse):#Bouclez permettant de s'assurer que la réponse ne contient pas de caractères indésirables
+    reponse = '%'# Variable pour stocker la réponse de l'API
+    while search(r"[^a-zA-Z= ,āīūēōéèêëàâäîïôöùûüçœ']", reponse):#Bouclez permettant de s'assurer que la réponse ne contient pas de caractères indésirables
         reponse = send('repond seulement par une chaine de caractère avec un mot en japonais en Rōmaji et l\'autre en français sur ce format (minimum 20 mots environ et sans aucun autre commentaire) : mot_japonais=mot_francais,baka=idiot ect sur ce format tout en corespondant a ce sujet :',sujet)
         index += 1
-        if index > 3:  # Limite le nombre de tentatives pour éviter une boucle infinie retourne sans charger de fichier
+        if index > 1:  # Limite le nombre de tentatives pour éviter une boucle infinie retourne sans charger de fichier
             print(reponse)
             return
 
@@ -100,7 +109,7 @@ def creer_nouveau_sujet(sujet):
     globals()[sujet] = generer(reponse)# Découpe la réponse en deux listes : une pour les mots japonais et une pour les mots français
 
     # Ajoute le nouveau sujet à la liste des sujets disponibles
-    with open(f'C:/Users/griff/Documents/python/learn_japonais/sujet_de_voc/{sujet}', 'w') as fichier:
+    with open(f'{base_dir}/sujet_de_voc/{sujet}', 'w', encoding="utf-8") as fichier:
         dump(globals()[sujet], fichier, indent=2, ensure_ascii=False)
 
     # raffraichi path 
@@ -110,7 +119,7 @@ def creer_nouveau_sujet(sujet):
     Il faut donc fermer le programme et le relancer pour que le nouveau sujet soit pris en compte
     ⚠️
     '''
-    path = listdir('C:/Users/griff/Documents/python/learn_japonais/sujet_de_voc')
+    path = listdir(f'{base_dir}/sujet_de_voc')
 
 
 
@@ -120,7 +129,7 @@ def interrogation(fichier):
 
 
     # Réinitialise la fenêtre et les labels pour ne pas que l'utilisateur puisse avoir les réponses
-    global liste_labels, fenetre
+    global liste_labels, fenetre, base_dir
     fenetre.geometry("400x300")
     for label in liste_labels:
         label.destroy()
@@ -135,7 +144,7 @@ def interrogation(fichier):
         f_interro.destroy()
     
     # Ouvre le fichier de vocabulaire et charge les listes de mots
-    with open(f'C:/Users/griff/Documents/python/learn_japonais/sujet_de_voc/{fichier}', 'r') as fichier:
+    with open(f'{base_dir}/sujet_de_voc/{fichier}', 'r', encoding="utf-8") as fichier:
             listes = load(fichier)
     
     # initialisation : random francais/japonais, notion
@@ -202,11 +211,14 @@ def interrogation(fichier):
         ⚠️
         '''
         # Joue la prononciation du mot japonais
-        texte = f'                {listes[0][j]}               '#espace pour evitez demarrage/coupure trop brut
+        texte = f'{listes[0][j]}'
         tts = gTTS(text=texte, lang='ja')
-        fichier_audio = "C:\\Users\\griff\\Documents\\python\\learn_japonais\\voix.mp3"
+        son_dir = f"{base_dir}\\voix.mp3"
+        fichier_audio = son_dir
         tts.save(fichier_audio)
-        playsound(fichier_audio)
+        playsound(fichier_audio, block=True) # Joue le fichier audio contenant la prononciation du mot japonais
+
+        remove(fichier_audio)
 
         # Passe au mot suivant, debloquer wait_variable
         boutton_cliquer.set(True)
