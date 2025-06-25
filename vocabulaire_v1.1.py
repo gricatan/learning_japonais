@@ -3,7 +3,7 @@ from json import load, dump
 from requests import post
 from random import randint
 from gtts import gTTS
-from playsound import playsound
+import pygame
 from tkinter import Tk, Label, StringVar, OptionMenu, Entry, Button, Frame, Toplevel, BooleanVar, LEFT, BOTH, RIGHT
 from sys import exit
 from re import search
@@ -11,6 +11,7 @@ from re import search
 
 
 # initialisation variables
+pygame.mixer.init()
 base_dir = path.dirname(path.abspath(__file__))
 liste_labels = []# liste utiliser en global pour stocker les labels tkinter et les supprimer
 with open(f'{base_dir}\\API.txt', 'r', encoding="utf-8") as fichier:# Chargement de la clé API depuis un fichier
@@ -216,7 +217,11 @@ def interrogation(fichier):
         son_dir = f"{base_dir}\\voix.mp3"
         fichier_audio = son_dir
         tts.save(fichier_audio)
-        playsound(fichier_audio, block=True) # Joue le fichier audio contenant la prononciation du mot japonais
+        pygame.mixer.music.load(fichier_audio) # Joue le fichier audio contenant la prononciation du mot japonais
+        pygame.mixer.music.play()
+
+        while pygame.mixer.music.get_busy():
+            pass
 
         remove(fichier_audio)
 
