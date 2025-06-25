@@ -223,7 +223,7 @@ def interrogation(fichier):
         while pygame.mixer.music.get_busy():
             pass
 
-        remove(fichier_audio)
+        
 
         # Passe au mot suivant, debloquer wait_variable
         boutton_cliquer.set(True)
